@@ -15,6 +15,7 @@
             --neon-red: #ff0055;
             --neon-amber: #ffcc00;
             --neon-green: #00ff9d;
+            --neon-white: #ffffff;
         }
 
         body {
@@ -30,6 +31,7 @@
             padding: 0;
         }
 
+        /* Layout Grid */
         #app-container {
             display: grid;
             grid-template-rows: auto 1fr auto;
@@ -57,6 +59,7 @@
             object-fit: contain;
         }
 
+        /* UI Components */
         .btn-control {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -101,6 +104,7 @@
         }
         @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
+        /* Overlay */
         #overlay { z-index: 9999; pointer-events: auto; }
         
         .diff-btn {
@@ -122,9 +126,21 @@
             pointer-events: auto;
         }
         .diff-btn:active { transform: scale(0.95); }
+        
+        /* Difficulty Styles */
+        .btn-rookie { color: var(--neon-white); border-color: var(--neon-white); background: rgba(255, 255, 255, 0.15); }
         .btn-easy { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0, 255, 157, 0.15); }
         .btn-norm { color: var(--neon-amber); border-color: var(--neon-amber); background: rgba(255, 204, 0, 0.15); }
         .btn-hard { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 85, 0.15); }
+
+        /* Next Piece Canvas */
+        #next-canvas {
+            width: 60px;
+            height: 60px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.3);
+            border-radius: 4px;
+        }
 
     </style>
 </head>
@@ -137,13 +153,22 @@
         <!-- Header -->
         <div class="flex flex-row md:flex-col justify-between md:justify-start items-center p-3 md:p-4 md:h-full md:panel relative z-10">
             <div class="flex md:flex-col gap-6 items-center md:items-start w-full">
-                <div>
-                    <div class="text-xs text-gray-500 tracking-widest mb-1">ENERGY</div>
-                    <div id="score" class="text-2xl font-bold text-cyan-400 leading-none">0</div>
+                <!-- Stats Group -->
+                <div class="flex gap-4 md:flex-col">
+                    <div>
+                        <div class="text-xs text-gray-500 tracking-widest mb-1">ENERGY</div>
+                        <div id="score" class="text-2xl font-bold text-cyan-400 leading-none">0</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500 tracking-widest mb-1">LEVEL</div>
+                        <div id="level" class="text-xl font-bold text-white leading-none">1</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-xs text-gray-500 tracking-widest mb-1">LEVEL</div>
-                    <div id="level" class="text-xl font-bold text-white leading-none">1</div>
+                
+                <!-- Next Piece Preview -->
+                <div class="flex flex-col items-center md:items-start md:mt-4">
+                    <div class="text-xs text-gray-500 tracking-widest mb-1">NEXT</div>
+                    <canvas id="next-canvas" width="60" height="60"></canvas>
                 </div>
             </div>
 
@@ -185,7 +210,6 @@
                 </div>
                 <div class="flex justify-center gap-12 mt-2">
                     <button class="btn-control btn-rotate w-24 h-24" onmousedown="window.handleInput(event, 'rotate')" ontouchstart="window.handleInput(event, 'rotate')"><i class="fa-solid fa-arrows-rotate text-3xl"></i></button>
-                    <!-- FIXED: BUTTON NOW SENDS 'harddrop' -->
                     <button class="btn-control btn-drop w-24 h-24" onmousedown="window.handleInput(event, 'harddrop')" ontouchstart="window.handleInput(event, 'harddrop')"><i class="fa-solid fa-angles-down text-3xl"></i></button>
                 </div>
             </div>
@@ -204,6 +228,7 @@
         
         <div id="menu-content" class="flex flex-col items-center w-72">
             <p class="text-xs text-gray-400 mb-4 tracking-widest">SELECT REACTOR GRADE</p>
+            <button class="diff-btn btn-rookie rounded" onclick="window.initGame('rookie')">Rookie (Training)</button>
             <button class="diff-btn btn-easy rounded" onclick="window.initGame('easy')">Stable (Easy)</button>
             <button class="diff-btn btn-norm rounded" onclick="window.initGame('medium')">Unstable (Medium)</button>
             <button class="diff-btn btn-hard rounded" onclick="window.initGame('hard')">Critical (Hard)</button>
@@ -218,14 +243,16 @@
 
 <script>
     /**
-     * CYCLOTRON ENGINE v4.2 (Yellow Button Fix)
-     * - Restored 'harddrop' logic
-     * - Re-bound yellow button to 'harddrop'
+     * CYCLOTRON ENGINE v5.0 (Rookie Edition)
+     * - Added 'Rookie' Difficulty (White, Slower)
+     * - Implemented Next Piece Preview
+     * - Refactored Spawn Logic for FIFO Queue
      */
 
     window.game = {
         grid: [],
         piece: { pos: {r: 0, s: 0}, shape: [], color: 0 },
+        nextPiece: { shape: [], color: 0 }, // New Next Piece State
         score: 0,
         level: 1,
         over: true,
@@ -241,7 +268,8 @@
         autoRotateTimer: 0,
         ctx: null, 
         canvas: null,
-        ctx2d: null
+        ctx2d: null,
+        nextCtx: null // Context for Next Piece canvas
     };
 
     const SECTORS = 16;   
@@ -295,14 +323,31 @@
         return [{r:0,s:0}];
     }
 
-    function spawnPiece() {
+    function generateRandomPiece() {
         const types = 'ILJOTSZ';
         const type = types[Math.floor(Math.random() * types.length)];
-        window.game.piece.shape = createShape(type);
-        window.game.piece.color = Math.floor(Math.random() * 7) + 1;
+        return {
+            shape: createShape(type),
+            color: Math.floor(Math.random() * 7) + 1
+        };
+    }
+
+    function spawnPiece() {
+        // Shift Next to Current
+        window.game.piece.shape = window.game.nextPiece.shape;
+        window.game.piece.color = window.game.nextPiece.color;
+        
+        // Reset Position
         window.game.piece.pos.r = RINGS - 2; 
         window.game.piece.pos.s = Math.floor(SECTORS / 2);
+
+        // Generate New Next
+        const next = generateRandomPiece();
+        window.game.nextPiece.shape = next.shape;
+        window.game.nextPiece.color = next.color;
         
+        drawNext(); // Update Preview
+
         if (checkCollision(window.game.piece.pos.r, window.game.piece.pos.s, window.game.piece.shape)) {
             triggerGameOver();
         }
@@ -359,7 +404,7 @@
             document.getElementById('level').innerText = window.game.level;
             
             AudioSys.play(800, 'sine', 0.2, 0.1); 
-            if (window.game.difficulty !== 'easy') window.game.rotationSpeed *= 1.1; 
+            if (window.game.difficulty !== 'easy' && window.game.difficulty !== 'rookie') window.game.rotationSpeed *= 1.1; 
 
             const flare = document.getElementById('center-status');
             if(flare) {
@@ -398,7 +443,6 @@
              window.game.dropTimer = 0;
         }
         else if (action === 'harddrop') {
-            // FIXED: Restored logic for instantaneous drop
             while (!checkCollision(window.game.piece.pos.r - 1, window.game.piece.pos.s, window.game.piece.shape)) {
                 window.game.piece.pos.r--;
             }
@@ -421,6 +465,46 @@
                 return; 
             }
         }
+    }
+
+    // --- Drawing System ---
+
+    function drawNext() {
+        const ctx = window.game.nextCtx;
+        if (!ctx) return;
+        
+        ctx.clearRect(0, 0, 60, 60);
+        
+        const shape = window.game.nextPiece.shape;
+        const color = COLORS[window.game.nextPiece.color];
+        
+        // Determine bounds to center the shape
+        // In preview: r maps to Y, s maps to X
+        let minR = Infinity, maxR = -Infinity;
+        let minS = Infinity, maxS = -Infinity;
+        
+        shape.forEach(p => {
+            if(p.r < minR) minR = p.r;
+            if(p.r > maxR) maxR = p.r;
+            if(p.s < minS) minS = p.s;
+            if(p.s > maxS) maxS = p.s;
+        });
+
+        const blockSize = 10;
+        const width = (maxS - minS + 1) * blockSize;
+        const height = (maxR - minR + 1) * blockSize;
+        const startX = (60 - width) / 2;
+        const startY = (60 - height) / 2;
+
+        ctx.fillStyle = color;
+        shape.forEach(p => {
+            // Draw blocks. Note: p.r increases outwards in game, but usually shapes define r=0 as base.
+            // We map r to Y (up/down) and s to X (left/right)
+            const x = startX + (p.s - minS) * blockSize;
+            const y = startY + (maxR - p.r) * blockSize; // Invert R for visual consistency (0 at bottom)
+            
+            ctx.fillRect(x, y, blockSize-1, blockSize-1);
+        });
     }
 
     function draw() {
@@ -533,7 +617,7 @@
                 window.gameInput('drop');
             }
 
-            if (window.game.difficulty !== 'easy') {
+            if (window.game.difficulty !== 'easy' && window.game.difficulty !== 'rookie') {
                 window.game.boardRotation += window.game.rotationSpeed;
             }
 
@@ -556,6 +640,7 @@
         let speed = 800;
         let rotSpeed = 0;
 
+        if (diff === 'rookie') { speed = 1200; rotSpeed = 0; } // Very Slow
         if (diff === 'easy') { speed = 1000; rotSpeed = 0; }
         if (diff === 'medium') { speed = 800; rotSpeed = 0.005; }
         if (diff === 'hard') { speed = 600; rotSpeed = 0.01; } 
@@ -573,13 +658,20 @@
         window.game.dropInterval = speed;
         window.game.canvas = document.getElementById('game-canvas');
         window.game.ctx2d = window.game.canvas.getContext('2d');
+        window.game.nextCtx = document.getElementById('next-canvas').getContext('2d');
 
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('menu-content').style.display = 'none';
         document.getElementById('game-over-content').style.display = 'none';
         
+        // Initialize Next Piece Logic
+        const first = generateRandomPiece();
+        window.game.nextPiece.shape = first.shape;
+        window.game.nextPiece.color = first.color;
+
         AudioSys.init();
-        spawnPiece();
+        spawnPiece(); // Will shift Next to Current and gen new Next
+        
         window.game.lastTime = performance.now();
         loop(window.game.lastTime);
     };
@@ -616,7 +708,7 @@
         else if (e.keyCode === 39) window.gameInput('right'); 
         else if (e.keyCode === 38) window.gameInput('rotate'); 
         else if (e.keyCode === 40) window.gameInput('drop');
-        else if (e.keyCode === 32) window.gameInput('harddrop'); // Spacebar = Hard Drop
+        else if (e.keyCode === 32) window.gameInput('harddrop'); 
     });
 
     setTimeout(() => {
