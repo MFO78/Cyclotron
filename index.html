@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CYCLOTRON: Orbital Stack</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -11,7 +11,6 @@
 
         :root {
             --bg-color: #050508;
-            --core-off: #1a1a20;
             --neon-cyan: #00f3ff;
             --neon-red: #ff0055;
             --neon-amber: #ffcc00;
@@ -25,27 +24,68 @@
             overflow: hidden;
             touch-action: none;
             user-select: none;
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+            padding: 0;
         }
 
-        canvas { display: block; }
+        #app-container {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        @media (min-width: 768px) {
+            #app-container {
+                grid-template-rows: 1fr;
+                grid-template-columns: 300px 1fr 300px;
+                align-items: center;
+                gap: 2rem;
+                padding: 2rem;
+            }
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            width: 100%; 
+            height: 100%;
+            object-fit: contain;
+        }
 
         .btn-control {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(4px);
             border-radius: 50%;
-            transition: all 0.1s;
-            pointer-events: auto;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--neon-cyan);
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            pointer-events: auto;
+            touch-action: none;
         }
         .btn-control:active {
             background: rgba(0, 243, 255, 0.2);
             box-shadow: 0 0 15px var(--neon-cyan);
             transform: scale(0.95);
+        }
+        .btn-rotate { border-color: rgba(255, 0, 85, 0.3); color: var(--neon-red); }
+        .btn-drop { border-color: rgba(255, 204, 0, 0.3); color: var(--neon-amber); }
+
+        .panel {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem;
+            border-radius: 12px;
         }
 
         .radar-sweep {
@@ -53,178 +93,196 @@
             top: 50%; left: 50%;
             width: 150vmax; height: 150vmax;
             transform: translate(-50%, -50%);
-            background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(0, 243, 255, 0.05) 360deg);
+            background: conic-gradient(from 0deg, transparent 0deg, transparent 270deg, rgba(0, 243, 255, 0.03) 360deg);
             border-radius: 50%;
-            animation: spin 6s linear infinite;
+            animation: spin 8s linear infinite;
             pointer-events: none;
             z-index: 0;
         }
-        
         @keyframes spin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
 
-        .btn-rotate {
-            border-color: rgba(255, 0, 85, 0.3);
-            color: var(--neon-red);
-        }
-
-        /* Difficulty Buttons */
+        #overlay { z-index: 9999; pointer-events: auto; }
+        
         .diff-btn {
             width: 100%;
-            padding: 12px;
-            margin-bottom: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
             font-weight: bold;
             letter-spacing: 0.1em;
             border: 1px solid rgba(255,255,255,0.2);
-            backdrop-filter: blur(5px);
-            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+            transition: transform 0.1s;
             text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            z-index: 10000;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            touch-action: manipulation;
+            pointer-events: auto;
         }
-        .diff-btn:hover { transform: scale(1.02); }
-        
-        .btn-easy { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0, 255, 157, 0.1); }
-        .btn-easy:hover { background: rgba(0, 255, 157, 0.3); box-shadow: 0 0 15px var(--neon-green); }
-
-        .btn-norm { color: var(--neon-amber); border-color: var(--neon-amber); background: rgba(255, 204, 0, 0.1); }
-        .btn-norm:hover { background: rgba(255, 204, 0, 0.3); box-shadow: 0 0 15px var(--neon-amber); }
-
-        .btn-hard { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 85, 0.1); }
-        .btn-hard:hover { background: rgba(255, 0, 85, 0.3); box-shadow: 0 0 15px var(--neon-red); }
+        .diff-btn:active { transform: scale(0.95); }
+        .btn-easy { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0, 255, 157, 0.15); }
+        .btn-norm { color: var(--neon-amber); border-color: var(--neon-amber); background: rgba(255, 204, 0, 0.15); }
+        .btn-hard { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 85, 0.15); }
 
     </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-center relative">
+<body>
 
     <div class="radar-sweep"></div>
 
-    <!-- HUD -->
-    <div class="absolute top-4 left-4 z-20 pointer-events-none">
-        <div class="text-xs text-gray-400 tracking-widest">ENERGY</div>
-        <div id="score" class="text-2xl font-bold text-cyan-400">0</div>
-        <div class="text-xs text-gray-400 tracking-widest mt-2">LEVEL</div>
-        <div id="level" class="text-xl font-bold text-white">1</div>
-    </div>
-    
-    <div class="absolute top-4 right-4 z-20 flex gap-4 pointer-events-auto">
-        <button id="mute-btn" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-volume-high text-xl"></i></button>
-        <button id="restart-icon-btn" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-power-off text-xl"></i></button>
-    </div>
+    <div id="app-container">
+        
+        <!-- Header -->
+        <div class="flex flex-row md:flex-col justify-between md:justify-start items-center p-3 md:p-4 md:h-full md:panel relative z-10">
+            <div class="flex md:flex-col gap-6 items-center md:items-start w-full">
+                <div>
+                    <div class="text-xs text-gray-500 tracking-widest mb-1">ENERGY</div>
+                    <div id="score" class="text-2xl font-bold text-cyan-400 leading-none">0</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-500 tracking-widest mb-1">LEVEL</div>
+                    <div id="level" class="text-xl font-bold text-white leading-none">1</div>
+                </div>
+            </div>
 
-    <!-- Game Container -->
-    <div class="relative z-10">
-        <canvas id="game-canvas"></canvas>
-        <div id="center-status" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none transition-opacity duration-200" style="opacity: 0;">
-            <div class="text-xs text-red-500 font-bold tracking-widest animate-pulse">CRITICAL FUSION</div>
+            <div class="hidden md:flex flex-col mt-auto w-full pt-8 border-t border-white/10">
+                <h3 class="text-sm text-cyan-400 font-bold mb-4 tracking-widest">MANUAL OVERRIDE</h3>
+                <div class="flex justify-between text-xs text-gray-400 mb-2"><span>ROTATE L/R</span> <span class="text-white">← →</span></div>
+                <div class="flex justify-between text-xs text-gray-400 mb-2"><span>SPIN ISOTOPE</span> <span class="text-white">↑</span></div>
+                <div class="flex justify-between text-xs text-gray-400 mb-2"><span>DROP</span> <span class="text-white">↓</span></div>
+                <div class="flex justify-between text-xs text-gray-400 mb-2"><span>HARD DROP</span> <span class="text-white">SPACE</span></div>
+            </div>
+
+            <div class="flex md:hidden gap-4">
+                <button onclick="window.toggleMute()" id="mute-btn-mobile" class="text-gray-400 hover:text-white p-2 pointer-events-auto"><i class="fa-solid fa-volume-high"></i></button>
+                <button onclick="window.resetMenu()" id="restart-btn-mobile" class="text-gray-400 hover:text-white p-2 pointer-events-auto"><i class="fa-solid fa-power-off"></i></button>
+            </div>
+        </div>
+
+        <!-- Canvas Wrapper -->
+        <div id="canvas-wrapper" class="relative w-full h-full flex items-center justify-center p-0 z-0 overflow-hidden">
+            <canvas id="game-canvas"></canvas>
+            
+            <div id="center-status" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none transition-opacity duration-200 opacity-0 z-20">
+                <div class="text-xs text-red-500 font-bold tracking-widest animate-pulse">CRITICAL FUSION</div>
+            </div>
+        </div>
+
+        <!-- Footer Controls -->
+        <div class="flex flex-col p-2 md:p-4 z-10 md:h-full md:panel md:justify-between pb-[env(safe-area-inset-bottom)]">
+            
+            <div class="hidden md:flex justify-end gap-4 mb-4">
+                <button onclick="window.toggleMute()" id="mute-btn-desktop" class="text-gray-400 hover:text-white transition-colors pointer-events-auto"><i class="fa-solid fa-volume-high text-xl"></i></button>
+                <button onclick="window.resetMenu()" id="restart-btn-desktop" class="text-gray-400 hover:text-white transition-colors pointer-events-auto"><i class="fa-solid fa-power-off text-xl"></i></button>
+            </div>
+
+            <div class="md:hidden flex flex-col gap-2 w-full">
+                <div class="flex justify-between w-full px-2">
+                    <button class="btn-control w-20 h-20" onmousedown="window.handleInput(event, 'left')" ontouchstart="window.handleInput(event, 'left')"><i class="fa-solid fa-rotate-left text-3xl"></i></button>
+                    <button class="btn-control w-20 h-20" onmousedown="window.handleInput(event, 'right')" ontouchstart="window.handleInput(event, 'right')"><i class="fa-solid fa-rotate-right text-3xl"></i></button>
+                </div>
+                <div class="flex justify-center gap-12 mt-2">
+                    <button class="btn-control btn-rotate w-24 h-24" onmousedown="window.handleInput(event, 'rotate')" ontouchstart="window.handleInput(event, 'rotate')"><i class="fa-solid fa-arrows-rotate text-3xl"></i></button>
+                    <!-- FIXED: BUTTON NOW SENDS 'harddrop' -->
+                    <button class="btn-control btn-drop w-24 h-24" onmousedown="window.handleInput(event, 'harddrop')" ontouchstart="window.handleInput(event, 'harddrop')"><i class="fa-solid fa-angles-down text-3xl"></i></button>
+                </div>
+            </div>
+
+            <div class="hidden md:block text-xs text-gray-500 leading-relaxed mt-auto">
+                <p>STATUS: <span class="text-green-400">ONLINE</span></p>
+                <p>GYRO: <span class="text-cyan-400">ACTIVE</span></p>
+            </div>
         </div>
     </div>
 
     <!-- Overlay -->
-    <div id="overlay" class="absolute inset-0 z-50 bg-black/90 flex flex-col items-center justify-center backdrop-blur-sm">
-        <h1 class="text-5xl md:text-6xl font-bold mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">CYCLOTRON</h1>
+    <div id="overlay" class="absolute inset-0 bg-black/95 flex flex-col items-center justify-center backdrop-blur-sm">
+        <h1 class="text-5xl md:text-7xl font-bold mb-2 tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">CYCLOTRON</h1>
         <div class="w-64 h-px bg-gray-800 mb-6"></div>
         
-        <div id="menu-content" class="flex flex-col items-center w-64">
+        <div id="menu-content" class="flex flex-col items-center w-72">
             <p class="text-xs text-gray-400 mb-4 tracking-widest">SELECT REACTOR GRADE</p>
-            <button onclick="startGame(1000)" class="diff-btn btn-easy rounded">Stable (Easy)</button>
-            <button onclick="startGame(700)" class="diff-btn btn-norm rounded">Unstable (Normal)</button>
-            <button onclick="startGame(400)" class="diff-btn btn-hard rounded">Critical (Hard)</button>
+            <button class="diff-btn btn-easy rounded" onclick="window.initGame('easy')">Stable (Easy)</button>
+            <button class="diff-btn btn-norm rounded" onclick="window.initGame('medium')">Unstable (Medium)</button>
+            <button class="diff-btn btn-hard rounded" onclick="window.initGame('hard')">Critical (Hard)</button>
         </div>
 
-        <div id="game-over-content" class="hidden flex-col items-center w-64">
+        <div id="game-over-content" class="hidden flex-col items-center w-72">
              <h2 class="text-3xl text-red-500 font-bold mb-2">MELTDOWN</h2>
-             <p class="text-gray-400 mb-6">SYSTEM FAILURE</p>
-             <button id="reset-btn" class="diff-btn btn-norm rounded">RE-INITIALIZE</button>
-        </div>
-    </div>
-
-    <!-- Controls -->
-    <div class="absolute bottom-6 w-full max-w-lg flex justify-between px-8 z-20 pointer-events-none">
-        <div class="flex gap-4">
-            <button id="btn-left" class="btn-control w-16 h-16 pointer-events-auto"><i class="fa-solid fa-rotate-left text-xl"></i></button>
-            <button id="btn-right" class="btn-control w-16 h-16 pointer-events-auto"><i class="fa-solid fa-rotate-right text-xl"></i></button>
-        </div>
-        <div class="flex gap-4">
-            <button id="btn-rotate" class="btn-control btn-rotate w-16 h-16 pointer-events-auto"><i class="fa-solid fa-arrows-rotate text-xl"></i></button>
-            <button id="btn-drop" class="btn-control w-16 h-16 border-amber-500/50 text-amber-400 pointer-events-auto"><i class="fa-solid fa-angles-down text-xl"></i></button>
+             <p class="text-gray-400 mb-6 text-sm tracking-widest">CONTAINMENT BREACH</p>
+             <button class="diff-btn btn-norm rounded" onclick="window.resetMenu()">RE-INITIALIZE</button>
         </div>
     </div>
 
 <script>
     /**
-     * CYCLOTRON ENGINE v3.0
-     * - Inverted Controls (User Preference)
-     * - Difficulty Selection
+     * CYCLOTRON ENGINE v4.2 (Yellow Button Fix)
+     * - Restored 'harddrop' logic
+     * - Re-bound yellow button to 'harddrop'
      */
 
-    const AudioSys = {
-        ctx: null,
-        enabled: true,
-        init() {
-            if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            if (this.ctx.state === 'suspended') this.ctx.resume();
-        },
-        toggle() {
-            this.enabled = !this.enabled;
-            const icon = this.enabled ? '<i class="fa-solid fa-volume-high text-xl"></i>' : '<i class="fa-solid fa-volume-xmark text-xl"></i>';
-            document.getElementById('mute-btn').innerHTML = icon;
-        },
-        play(freq, type, dur, vol = 0.1) {
-            if (!this.enabled || !this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            gain.gain.setValueAtTime(vol, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + dur);
-        },
-        tick() { this.play(800, 'triangle', 0.05, 0.03); },
-        rotate() { this.play(1200, 'sine', 0.1, 0.05); },
-        lock() { this.play(150, 'sawtooth', 0.15, 0.1); },
-        clear() { 
-            this.play(800, 'sine', 0.2, 0.1); 
-            setTimeout(() => this.play(1200, 'sine', 0.3, 0.1), 100);
-        },
-        gameOver() { this.play(100, 'sawtooth', 1.0, 0.3); }
+    window.game = {
+        grid: [],
+        piece: { pos: {r: 0, s: 0}, shape: [], color: 0 },
+        score: 0,
+        level: 1,
+        over: true,
+        dropTimer: 0,
+        dropInterval: 800,
+        baseSpeed: 800,
+        lastTime: 0,
+        animId: null,
+        audioEnabled: true,
+        difficulty: 'easy',
+        boardRotation: 0,
+        rotationSpeed: 0,
+        autoRotateTimer: 0,
+        ctx: null, 
+        canvas: null,
+        ctx2d: null
     };
 
     const SECTORS = 16;   
     const RINGS = 14;     
-    const INNER_RADIUS = 40; 
-    
-    const canvas = document.getElementById('game-canvas');
-    const ctx = canvas.getContext('2d');
-    
-    let grid = []; 
-    let piece = { pos: {r: 0, s: 0}, shape: [], color: 0, active: false };
-    let score = 0;
-    let level = 1;
-    let linesCleared = 0;
-    let gameOver = true; // Start in Menu state
-    let dropTimer = 0;
-    let dropInterval = 800;
-    let baseSpeed = 800;
-    let lastTime = 0;
-
+    const INNER_RADIUS = 30; 
     const COLORS = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
 
-    let cx, cy, radiusStep;
-    function resize() {
-        const size = Math.min(window.innerWidth, window.innerHeight) * 0.95;
-        canvas.width = size;
-        canvas.height = size;
-        cx = size / 2;
-        cy = size / 2;
-        radiusStep = (cx - INNER_RADIUS - 10) / RINGS;
-    }
-    window.addEventListener('resize', resize);
-    resize();
+    // --- Input Handler ---
+    window.handleInput = function(e, action) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        window.gameInput(action);
+    };
 
-    function initGrid() {
-        grid = Array(RINGS).fill().map(() => Array(SECTORS).fill(0));
-    }
+    const AudioSys = {
+        init() {
+            try {
+                if (!window.game.ctx) window.game.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                if (window.game.ctx.state === 'suspended') window.game.ctx.resume();
+            } catch(e) {}
+        },
+        play(freq, type, dur, vol = 0.1) {
+            if (!window.game.audioEnabled || !window.game.ctx) return;
+            try {
+                const osc = window.game.ctx.createOscillator();
+                const gain = window.game.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, window.game.ctx.currentTime);
+                gain.gain.setValueAtTime(vol, window.game.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, window.game.ctx.currentTime + dur);
+                osc.connect(gain);
+                gain.connect(window.game.ctx.destination);
+                osc.start();
+                osc.stop(window.game.ctx.currentTime + dur);
+            } catch(e) {}
+        }
+    };
+
+    // --- Core Logic ---
 
     function createShape(type) {
         if (type === 'I') return [{r:0,s:-1}, {r:0,s:0}, {r:0,s:1}, {r:0,s:2}];
@@ -240,12 +298,12 @@
     function spawnPiece() {
         const types = 'ILJOTSZ';
         const type = types[Math.floor(Math.random() * types.length)];
-        piece.shape = createShape(type);
-        piece.color = Math.floor(Math.random() * 7) + 1;
-        piece.pos.r = RINGS - 2; 
-        piece.pos.s = Math.floor(SECTORS / 2);
+        window.game.piece.shape = createShape(type);
+        window.game.piece.color = Math.floor(Math.random() * 7) + 1;
+        window.game.piece.pos.r = RINGS - 2; 
+        window.game.piece.pos.s = Math.floor(SECTORS / 2);
         
-        if (checkCollision(piece.pos.r, piece.pos.s, piece.shape)) {
+        if (checkCollision(window.game.piece.pos.r, window.game.piece.pos.s, window.game.piece.shape)) {
             triggerGameOver();
         }
     }
@@ -254,21 +312,20 @@
         for (let block of shape) {
             let tr = r + block.r;
             let ts = (s + block.s + SECTORS * 10) % SECTORS; 
-            
             if (tr < 0) return true;
             if (tr >= RINGS) continue; 
-            if (grid[tr] && grid[tr][ts] !== 0) return true;
+            if (window.game.grid[tr] && window.game.grid[tr][ts] !== 0) return true;
         }
         return false;
     }
 
     function lockPiece() {
-        AudioSys.lock();
-        for (let block of piece.shape) {
-            let tr = piece.pos.r + block.r;
-            let ts = (piece.pos.s + block.s + SECTORS * 10) % SECTORS;
+        AudioSys.play(150, 'sawtooth', 0.15, 0.1);
+        for (let block of window.game.piece.shape) {
+            let tr = window.game.piece.pos.r + block.r;
+            let ts = (window.game.piece.pos.s + block.s + SECTORS * 10) % SECTORS;
             if (tr >= 0 && tr < RINGS) {
-                grid[tr][ts] = piece.color;
+                window.game.grid[tr][ts] = window.game.piece.color;
             }
         }
         checkRings();
@@ -280,7 +337,7 @@
         for (let r = 0; r < RINGS; r++) {
             let full = true;
             for (let s = 0; s < SECTORS; s++) {
-                if (grid[r][s] === 0) {
+                if (window.game.grid[r][s] === 0) {
                     full = false;
                     break;
                 }
@@ -288,87 +345,111 @@
             if (full) {
                 cleared++;
                 for (let nr = r; nr < RINGS - 1; nr++) {
-                    grid[nr] = [...grid[nr+1]];
+                    window.game.grid[nr] = [...window.game.grid[nr+1]];
                 }
-                grid[RINGS-1] = Array(SECTORS).fill(0);
+                window.game.grid[RINGS-1] = Array(SECTORS).fill(0);
                 r--;
             }
         }
         
         if (cleared > 0) {
-            score += Math.pow(cleared, 2) * 100;
-            linesCleared += cleared;
-            level = Math.floor(linesCleared / 10) + 1;
-            document.getElementById('score').innerText = score;
-            document.getElementById('level').innerText = level;
-            AudioSys.clear();
+            window.game.score += Math.pow(cleared, 2) * 100;
+            window.game.level++;
+            document.getElementById('score').innerText = window.game.score;
+            document.getElementById('level').innerText = window.game.level;
             
-            // Speed scaling based on baseSpeed
-            dropInterval = Math.max(100, baseSpeed - (level * 50));
-            
+            AudioSys.play(800, 'sine', 0.2, 0.1); 
+            if (window.game.difficulty !== 'easy') window.game.rotationSpeed *= 1.1; 
+
             const flare = document.getElementById('center-status');
-            flare.innerText = "RING FUSION";
-            flare.style.opacity = 1;
-            setTimeout(() => flare.style.opacity = 0, 500);
+            if(flare) {
+                flare.style.opacity = 1;
+                setTimeout(() => flare.style.opacity = 0, 500);
+            }
         }
     }
 
-    // --- Movement & Rotation ---
-
-    function rotatePiece() {
-        if (gameOver) return;
-        const newShape = piece.shape.map(p => ({ r: p.s, s: -p.r }));
+    window.gameInput = function(action) {
+        if (window.game.over) return;
         
-        const kicks = [[0, 0], [0, 1], [0, -1], [0, 2], [0, -2], [1, 0], [-1, 0]];
+        if (action === 'left') { 
+             const newS = window.game.piece.pos.s + 1;
+             if (!checkCollision(window.game.piece.pos.r, newS, window.game.piece.shape)) {
+                 window.game.piece.pos.s = newS;
+                 AudioSys.play(800, 'triangle', 0.05, 0.03);
+             }
+        }
+        else if (action === 'right') { 
+             const newS = window.game.piece.pos.s - 1;
+             if (!checkCollision(window.game.piece.pos.r, newS, window.game.piece.shape)) {
+                 window.game.piece.pos.s = newS;
+                 AudioSys.play(800, 'triangle', 0.05, 0.03);
+             }
+        }
+        else if (action === 'rotate') {
+            performRotation();
+        }
+        else if (action === 'drop') {
+             if (!checkCollision(window.game.piece.pos.r - 1, window.game.piece.pos.s, window.game.piece.shape)) {
+                window.game.piece.pos.r--;
+             } else {
+                lockPiece();
+             }
+             window.game.dropTimer = 0;
+        }
+        else if (action === 'harddrop') {
+            // FIXED: Restored logic for instantaneous drop
+            while (!checkCollision(window.game.piece.pos.r - 1, window.game.piece.pos.s, window.game.piece.shape)) {
+                window.game.piece.pos.r--;
+            }
+            lockPiece();
+            window.game.dropTimer = 0;
+        }
+    };
 
+    function performRotation() {
+        const newShape = window.game.piece.shape.map(p => ({ r: p.s, s: -p.r }));
+        const kicks = [[0, 0], [0, 1], [0, -1], [0, 2], [0, -2], [1, 0], [-1, 0]];
         for (let kick of kicks) {
-            const testR = piece.pos.r + kick[0];
-            const testS = piece.pos.s + kick[1];
-            
+            const testR = window.game.piece.pos.r + kick[0];
+            const testS = window.game.piece.pos.s + kick[1];
             if (!checkCollision(testR, testS, newShape)) {
-                piece.shape = newShape;
-                piece.pos.r = testR;
-                piece.pos.s = testS;
-                AudioSys.rotate();
+                window.game.piece.shape = newShape;
+                window.game.piece.pos.r = testR;
+                window.game.piece.pos.s = testS;
+                AudioSys.play(1200, 'sine', 0.1, 0.05);
                 return; 
             }
         }
     }
 
-    function move(dir) {
-        if (gameOver) return;
-        const newS = piece.pos.s + dir;
-        if (!checkCollision(piece.pos.r, newS, piece.shape)) {
-            piece.pos.s = newS;
-            AudioSys.tick();
-        }
-    }
-
-    function drop() {
-        if (gameOver) return;
-        if (!checkCollision(piece.pos.r - 1, piece.pos.s, piece.shape)) {
-            piece.pos.r--;
-        } else {
-            lockPiece();
-        }
-        dropTimer = 0;
-    }
-    
-    function hardDrop() {
-        if (gameOver) return;
-        while (!checkCollision(piece.pos.r - 1, piece.pos.s, piece.shape)) {
-            piece.pos.r--;
-        }
-        lockPiece();
-    }
-
-    // --- Drawing ---
-
     function draw() {
-        ctx.fillStyle = '#050508';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const ctx = window.game.ctx2d;
+        const canvas = window.game.canvas;
+        if (!ctx || !canvas) return;
+
+        const wrapper = canvas.parentNode;
+        const rect = wrapper.getBoundingClientRect();
+        const size = Math.floor(Math.min(rect.width, rect.height) * 0.99);
         
-        // Grid Lines
+        if (canvas.width !== size) {
+            canvas.width = size;
+            canvas.height = size;
+        }
+        
+        const cx = size / 2;
+        const cy = size / 2;
+        const radiusStep = (cx - INNER_RADIUS - 5) / RINGS;
+
+        ctx.fillStyle = '#050508'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(window.game.boardRotation);
+        ctx.translate(-cx, -cy);
+
+        // Grid
         ctx.strokeStyle = '#1a1a20';
         ctx.lineWidth = 1;
         for (let r = 0; r <= RINGS; r++) {
@@ -386,38 +467,39 @@
             ctx.stroke();
         }
 
-        // Static Blocks
+        // Blocks
         for (let r = 0; r < RINGS; r++) {
             for (let s = 0; s < SECTORS; s++) {
-                if (grid[r][s] !== 0) drawBlock(r, s, COLORS[grid[r][s]]);
+                if (window.game.grid[r][s] !== 0) drawBlock(ctx, cx, cy, radiusStep, r, s, COLORS[window.game.grid[r][s]], false);
             }
         }
 
         // Active Piece
-        if (!gameOver) {
+        if (!window.game.over) {
             ctx.shadowBlur = 15;
-            // Ghost
-            let ghostR = piece.pos.r;
-            while (!checkCollision(ghostR - 1, piece.pos.s, piece.shape)) ghostR--;
+            let ghostR = window.game.piece.pos.r;
+            while (!checkCollision(ghostR - 1, window.game.piece.pos.s, window.game.piece.shape)) ghostR--;
             
             ctx.globalAlpha = 0.15;
-            for (let block of piece.shape) {
+            for (let block of window.game.piece.shape) {
                 let r = ghostR + block.r;
-                let s = (piece.pos.s + block.s + SECTORS * 10) % SECTORS;
-                if (r >= 0 && r < RINGS) drawBlock(r, s, '#ffffff');
+                let s = (window.game.piece.pos.s + block.s + SECTORS * 10) % SECTORS;
+                if (r >= 0 && r < RINGS) drawBlock(ctx, cx, cy, radiusStep, r, s, '#ffffff', false);
             }
             
             ctx.globalAlpha = 1.0;
-            for (let block of piece.shape) {
-                let r = piece.pos.r + block.r;
-                let s = (piece.pos.s + block.s + SECTORS * 10) % SECTORS;
-                if (r >= 0 && r < RINGS) drawBlock(r, s, COLORS[piece.color], true);
+            for (let block of window.game.piece.shape) {
+                let r = window.game.piece.pos.r + block.r;
+                let s = (window.game.piece.pos.s + block.s + SECTORS * 10) % SECTORS;
+                if (r >= 0 && r < RINGS) drawBlock(ctx, cx, cy, radiusStep, r, s, COLORS[window.game.piece.color], true);
             }
             ctx.shadowBlur = 0;
         }
+
+        ctx.restore();
     }
 
-    function drawBlock(r, s, color, active = false) {
+    function drawBlock(ctx, cx, cy, radiusStep, r, s, color, active) {
         const angleStart = (s / SECTORS) * Math.PI * 2 - (Math.PI/2); 
         const angleEnd = ((s + 1) / SECTORS) * Math.PI * 2 - (Math.PI/2);
         const rInner = INNER_RADIUS + r * radiusStep;
@@ -441,93 +523,112 @@
         }
     }
 
-    // --- Loop ---
+    function loop(time) {
+        if (!window.game.over) {
+            const dt = time - window.game.lastTime;
+            window.game.lastTime = time;
+            
+            window.game.dropTimer += dt;
+            if (window.game.dropTimer > window.game.dropInterval) {
+                window.gameInput('drop');
+            }
 
-    function update(time = 0) {
-        if (!gameOver) {
-            const dt = time - lastTime;
-            lastTime = time;
-            dropTimer += dt;
-            if (dropTimer > dropInterval) drop();
+            if (window.game.difficulty !== 'easy') {
+                window.game.boardRotation += window.game.rotationSpeed;
+            }
+
+            if (window.game.difficulty === 'hard') {
+                window.game.autoRotateTimer += dt;
+                if (window.game.autoRotateTimer > 2000) {
+                    performRotation();
+                    window.game.autoRotateTimer = 0;
+                }
+            }
+
+            draw();
+            window.game.animId = requestAnimationFrame(loop);
         }
-        draw();
-        requestAnimationFrame(update);
     }
 
-    // --- State Management ---
-
-    window.startGame = function(speed) {
-        baseSpeed = speed;
-        initGrid();
-        score = 0;
-        level = 1;
-        linesCleared = 0;
-        gameOver = false;
-        dropInterval = speed;
+    window.initGame = function(diff) {
+        if (window.game.animId) cancelAnimationFrame(window.game.animId);
         
+        let speed = 800;
+        let rotSpeed = 0;
+
+        if (diff === 'easy') { speed = 1000; rotSpeed = 0; }
+        if (diff === 'medium') { speed = 800; rotSpeed = 0.005; }
+        if (diff === 'hard') { speed = 600; rotSpeed = 0.01; } 
+
+        window.game.difficulty = diff;
+        window.game.rotationSpeed = rotSpeed;
+        window.game.boardRotation = 0;
+        window.game.autoRotateTimer = 0;
+
+        window.game.grid = Array(RINGS).fill().map(() => Array(SECTORS).fill(0));
+        window.game.score = 0;
+        window.game.level = 1;
+        window.game.over = false;
+        window.game.baseSpeed = speed;
+        window.game.dropInterval = speed;
+        window.game.canvas = document.getElementById('game-canvas');
+        window.game.ctx2d = window.game.canvas.getContext('2d');
+
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('menu-content').style.display = 'none';
         document.getElementById('game-over-content').style.display = 'none';
         
         AudioSys.init();
         spawnPiece();
-        lastTime = performance.now();
-        update(lastTime);
-    }
+        window.game.lastTime = performance.now();
+        loop(window.game.lastTime);
+    };
+
+    window.resetMenu = function() {
+        window.game.over = true;
+        if (window.game.animId) cancelAnimationFrame(window.game.animId);
+        document.getElementById('overlay').style.display = 'flex';
+        document.getElementById('game-over-content').style.display = 'none';
+        document.getElementById('menu-content').style.display = 'flex';
+    };
+
+    window.toggleMute = function() {
+        window.game.audioEnabled = !window.game.audioEnabled;
+        const icon = window.game.audioEnabled ? '<i class="fa-solid fa-volume-high"></i>' : '<i class="fa-solid fa-volume-xmark"></i>';
+        const m = document.getElementById('mute-btn-mobile');
+        const d = document.getElementById('mute-btn-desktop');
+        if(m) m.innerHTML = icon;
+        if(d) d.innerHTML = icon;
+    };
 
     function triggerGameOver() {
-        gameOver = true;
-        AudioSys.gameOver();
+        window.game.over = true;
+        AudioSys.play(100, 'sawtooth', 1.0, 0.3);
+        if (window.game.animId) cancelAnimationFrame(window.game.animId);
         document.getElementById('overlay').style.display = 'flex';
         document.getElementById('menu-content').style.display = 'none';
         document.getElementById('game-over-content').style.display = 'flex';
     }
 
-    document.getElementById('reset-btn').addEventListener('click', () => {
-        document.getElementById('game-over-content').style.display = 'none';
-        document.getElementById('menu-content').style.display = 'flex';
-    });
-
-    document.getElementById('restart-icon-btn').addEventListener('click', () => {
-        gameOver = true;
-        document.getElementById('overlay').style.display = 'flex';
-        document.getElementById('game-over-content').style.display = 'none';
-        document.getElementById('menu-content').style.display = 'flex';
-    });
-
-    // --- Input Handling ---
-
     document.addEventListener('keydown', e => {
-        // INVERTED LOGIC APPLIED HERE
-        if (e.keyCode === 37) move(1); // Left Arrow now moves Clockwise (+)
-        else if (e.keyCode === 39) move(-1); // Right Arrow now moves Counter-Clockwise (-)
-        else if (e.keyCode === 38) rotatePiece(); 
-        else if (e.keyCode === 40) drop();
-        else if (e.keyCode === 32) hardDrop();
+        if (window.game.over) return;
+        if (e.keyCode === 37) window.gameInput('left'); 
+        else if (e.keyCode === 39) window.gameInput('right'); 
+        else if (e.keyCode === 38) window.gameInput('rotate'); 
+        else if (e.keyCode === 40) window.gameInput('drop');
+        else if (e.keyCode === 32) window.gameInput('harddrop'); // Spacebar = Hard Drop
     });
 
-    const addTouch = (id, fn) => {
-        const el = document.getElementById(id);
-        el.addEventListener('touchstart', (e) => { e.preventDefault(); fn(); });
-        el.addEventListener('mousedown', (e) => { e.preventDefault(); fn(); });
-    };
+    setTimeout(() => {
+        window.game.canvas = document.getElementById('game-canvas');
+        window.game.ctx2d = window.game.canvas.getContext('2d');
+        window.game.grid = Array(RINGS).fill().map(() => Array(SECTORS).fill(0));
+        draw();
+    }, 100);
 
-    // INVERTED BUTTONS
-    addTouch('btn-left', () => move(1)); // Left Button -> Clockwise
-    addTouch('btn-right', () => move(-1)); // Right Button -> Counter-Clockwise
-    
-    addTouch('btn-rotate', () => rotatePiece());
-    addTouch('btn-drop', () => hardDrop());
-    
-    canvas.addEventListener('touchstart', (e) => { 
-        e.preventDefault(); 
-        if (e.touches[0].clientY < window.innerHeight - 150) rotatePiece();
-    });
-
-    document.getElementById('mute-btn').addEventListener('click', () => AudioSys.toggle());
-
-    // Initial State: Render background only
-    draw();
+    new ResizeObserver(() => {
+         if (!window.game.over) draw(); 
+    }).observe(document.getElementById('canvas-wrapper'));
 
 </script>
 </body>
