@@ -127,13 +127,11 @@
         }
         .diff-btn:active { transform: scale(0.95); }
         
-        /* Difficulty Styles */
         .btn-rookie { color: var(--neon-white); border-color: var(--neon-white); background: rgba(255, 255, 255, 0.15); }
         .btn-easy { color: var(--neon-green); border-color: var(--neon-green); background: rgba(0, 255, 157, 0.15); }
         .btn-norm { color: var(--neon-amber); border-color: var(--neon-amber); background: rgba(255, 204, 0, 0.15); }
         .btn-hard { color: var(--neon-red); border-color: var(--neon-red); background: rgba(255, 0, 85, 0.15); }
 
-        /* Next Piece Canvas */
         #next-canvas {
             width: 60px;
             height: 60px;
@@ -161,7 +159,8 @@
                     </div>
                     <div>
                         <div class="text-xs text-gray-500 tracking-widest mb-1">LEVEL</div>
-                        <div id="level" class="text-xl font-bold text-white leading-none">1</div>
+                        <!-- Starts at 0 now -->
+                        <div id="level" class="text-xl font-bold text-white leading-none">0</div>
                     </div>
                 </div>
                 
@@ -243,18 +242,17 @@
 
 <script>
     /**
-     * CYCLOTRON ENGINE v5.0 (Rookie Edition)
-     * - Added 'Rookie' Difficulty (White, Slower)
-     * - Implemented Next Piece Preview
-     * - Refactored Spawn Logic for FIFO Queue
+     * CYCLOTRON ENGINE v5.1 (Level 0 Fix)
+     * - Initialization now correctly resets Level DOM to 0
+     * - Start Level = 0
      */
 
     window.game = {
         grid: [],
         piece: { pos: {r: 0, s: 0}, shape: [], color: 0 },
-        nextPiece: { shape: [], color: 0 }, // New Next Piece State
+        nextPiece: { shape: [], color: 0 },
         score: 0,
-        level: 1,
+        level: 0, // Starts at 0
         over: true,
         dropTimer: 0,
         dropInterval: 800,
@@ -269,7 +267,7 @@
         ctx: null, 
         canvas: null,
         ctx2d: null,
-        nextCtx: null // Context for Next Piece canvas
+        nextCtx: null
     };
 
     const SECTORS = 16;   
@@ -277,7 +275,6 @@
     const INNER_RADIUS = 30; 
     const COLORS = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
 
-    // --- Input Handler ---
     window.handleInput = function(e, action) {
         if (e) {
             e.preventDefault();
@@ -310,8 +307,6 @@
         }
     };
 
-    // --- Core Logic ---
-
     function createShape(type) {
         if (type === 'I') return [{r:0,s:-1}, {r:0,s:0}, {r:0,s:1}, {r:0,s:2}];
         if (type === 'O') return [{r:0,s:0}, {r:0,s:1}, {r:1,s:0}, {r:1,s:1}];
@@ -333,20 +328,16 @@
     }
 
     function spawnPiece() {
-        // Shift Next to Current
         window.game.piece.shape = window.game.nextPiece.shape;
         window.game.piece.color = window.game.nextPiece.color;
-        
-        // Reset Position
         window.game.piece.pos.r = RINGS - 2; 
         window.game.piece.pos.s = Math.floor(SECTORS / 2);
 
-        // Generate New Next
         const next = generateRandomPiece();
         window.game.nextPiece.shape = next.shape;
         window.game.nextPiece.color = next.color;
         
-        drawNext(); // Update Preview
+        drawNext();
 
         if (checkCollision(window.game.piece.pos.r, window.game.piece.pos.s, window.game.piece.shape)) {
             triggerGameOver();
@@ -467,19 +458,14 @@
         }
     }
 
-    // --- Drawing System ---
-
     function drawNext() {
         const ctx = window.game.nextCtx;
         if (!ctx) return;
         
         ctx.clearRect(0, 0, 60, 60);
-        
         const shape = window.game.nextPiece.shape;
         const color = COLORS[window.game.nextPiece.color];
         
-        // Determine bounds to center the shape
-        // In preview: r maps to Y, s maps to X
         let minR = Infinity, maxR = -Infinity;
         let minS = Infinity, maxS = -Infinity;
         
@@ -498,11 +484,8 @@
 
         ctx.fillStyle = color;
         shape.forEach(p => {
-            // Draw blocks. Note: p.r increases outwards in game, but usually shapes define r=0 as base.
-            // We map r to Y (up/down) and s to X (left/right)
             const x = startX + (p.s - minS) * blockSize;
-            const y = startY + (maxR - p.r) * blockSize; // Invert R for visual consistency (0 at bottom)
-            
+            const y = startY + (maxR - p.r) * blockSize; 
             ctx.fillRect(x, y, blockSize-1, blockSize-1);
         });
     }
@@ -533,7 +516,6 @@
         ctx.rotate(window.game.boardRotation);
         ctx.translate(-cx, -cy);
 
-        // Grid
         ctx.strokeStyle = '#1a1a20';
         ctx.lineWidth = 1;
         for (let r = 0; r <= RINGS; r++) {
@@ -551,14 +533,12 @@
             ctx.stroke();
         }
 
-        // Blocks
         for (let r = 0; r < RINGS; r++) {
             for (let s = 0; s < SECTORS; s++) {
                 if (window.game.grid[r][s] !== 0) drawBlock(ctx, cx, cy, radiusStep, r, s, COLORS[window.game.grid[r][s]], false);
             }
         }
 
-        // Active Piece
         if (!window.game.over) {
             ctx.shadowBlur = 15;
             let ghostR = window.game.piece.pos.r;
@@ -640,7 +620,7 @@
         let speed = 800;
         let rotSpeed = 0;
 
-        if (diff === 'rookie') { speed = 1200; rotSpeed = 0; } // Very Slow
+        if (diff === 'rookie') { speed = 1200; rotSpeed = 0; }
         if (diff === 'easy') { speed = 1000; rotSpeed = 0; }
         if (diff === 'medium') { speed = 800; rotSpeed = 0.005; }
         if (diff === 'hard') { speed = 600; rotSpeed = 0.01; } 
@@ -652,25 +632,28 @@
 
         window.game.grid = Array(RINGS).fill().map(() => Array(SECTORS).fill(0));
         window.game.score = 0;
-        window.game.level = 1;
+        window.game.level = 0; // START AT 0
         window.game.over = false;
         window.game.baseSpeed = speed;
         window.game.dropInterval = speed;
         window.game.canvas = document.getElementById('game-canvas');
         window.game.ctx2d = window.game.canvas.getContext('2d');
         window.game.nextCtx = document.getElementById('next-canvas').getContext('2d');
+        
+        // FIX: Update UI immediately
+        document.getElementById('level').innerText = '0';
+        document.getElementById('score').innerText = '0';
 
         document.getElementById('overlay').style.display = 'none';
         document.getElementById('menu-content').style.display = 'none';
         document.getElementById('game-over-content').style.display = 'none';
         
-        // Initialize Next Piece Logic
         const first = generateRandomPiece();
         window.game.nextPiece.shape = first.shape;
         window.game.nextPiece.color = first.color;
 
         AudioSys.init();
-        spawnPiece(); // Will shift Next to Current and gen new Next
+        spawnPiece(); 
         
         window.game.lastTime = performance.now();
         loop(window.game.lastTime);
